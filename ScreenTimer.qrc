@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/ScreenTimer">
+        <file>res/close.png</file>
+        <file>res/pause.png</file>
+        <file>res/play.png</file>
+        <file>res/retry.png</file>
+    </qresource>
+</RCC>
