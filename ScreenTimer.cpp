@@ -1,53 +1,31 @@
 #include "ScreenTimer.h"
 #include <QDesktopWidget>
 #include <QMouseEvent>
+#include <QLayout>
+#include <QPushButton>
+#include <QPainter>
 #include "BlurPanel.h"
+#include "centralWgt.h"
 
 static const unsigned int CNTRL_SH_INT = 1500;//msec
+static const float WGT_WDTH_PERC = 0.15f;//widget width percentage of screen
+static const float WGT_HGHT_PERC = 0.07f;//widget height percentage of screen
+static const int SCRN_X_OFFSET = 5;//screen offset in x axis
+static const int SCRN_Y_OFFSET = 5;//scrren offset in y axis
 
 ScreenTimer::ScreenTimer(QWidget *parent)
-: QMainWindow(parent),
-m_InWid(false),
-m_WidMov(false),
-m_pBlur(Q_NULLPTR),
-m_pNoBlur(Q_NULLPTR),
-m_Pos(0,0)
+: QMainWindow(parent)
 {
-    ui.setupUi(this);
+    QDesktopWidget qdw;
+    QRect scrnRct = qdw.availableGeometry();
+
+    setupUi(QSize(scrnRct.size()));
     setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::ToolTip);
     setAttribute(Qt::WA_AlwaysStackOnTop, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
-    setAttribute(Qt::WA_NoSystemBackground, true);
-    this->setMouseTracking(true);
-    QDesktopWidget qdw;
-    QRect scrnRct = qdw.availableGeometry();
-    this->move(scrnRct.x()+scrnRct.width()-255, scrnRct.y()+5);
-    
-    QSizePolicy sz = ui.xBtn->sizePolicy();
-    sz.setRetainSizeWhenHidden(true);
-    ui.xBtn->setSizePolicy(sz);
-    ui.xBtn->setVisible(false);
-    QPixmap xPix(":/ScreenTimer/res/close.png");
-    xPix.scaled(ui.xBtn->size());
-    ui.xBtn->setIcon(QIcon(xPix));
+    //setAttribute(Qt::WA_NoSystemBackground, true);
 
-    sz = ui.sBtn->sizePolicy();
-    sz.setRetainSizeWhenHidden(true);
-    ui.sBtn->setSizePolicy(sz);
-    ui.sBtn->setVisible(false);
-    QPixmap sPix(":/ScreenTimer/res/play.png");
-    sPix.scaled(ui.sBtn->size());//QSize(40,36));
-    ui.sBtn->setIcon(QIcon(sPix));
-    
-    sz = ui.rBtn->sizePolicy();
-    sz.setRetainSizeWhenHidden(true);
-    ui.rBtn->setSizePolicy(sz);
-    ui.rBtn->setVisible(false);
-    QPixmap rPix(":/ScreenTimer/res/retry.png");
-    rPix.scaled(ui.rBtn->size());
-    ui.rBtn->setIcon(QIcon(rPix));
-
-    m_BtnTmr.setSingleShot(true);
+	this->move(scrnRct.x() + scrnRct.width() * (1 - WGT_WDTH_PERC) - SCRN_X_OFFSET, scrnRct.y() + SCRN_Y_OFFSET);
 
     /*curved frame*/
     const int radius = 10;
@@ -56,113 +34,41 @@ m_Pos(0,0)
     QRegion mask = QRegion(pPath.toFillPolygon().toPolygon());
     this->setMask(mask);
 
-    /*blur effect*/
-    m_pNoBlur = this->graphicsEffect();
-
-    connect(ui.sBtn, &QPushButton::clicked, this, &ScreenTimer::sClick);
-    connect(ui.rBtn, &QPushButton::clicked, this, &ScreenTimer::rClick);
-    connect(ui.xBtn, &QPushButton::clicked, this, &ScreenTimer::xClick);
-    connect(&m_BtnTmr, &QTimer::timeout, this, &ScreenTimer::cntrlOff);
+    /*enable mouse tracking*/
+    centralWidget->setMouseTracking(true);
 }
 
 ScreenTimer::~ScreenTimer()
 {
     //m_pBlur is dynamically deleted
     /*if (m_pBlur != Q_NULLPTR)
-        delete m_pBlur;*/
+        m_pBlur->deleteLater();*/
 }
 
-void ScreenTimer::mousePressEvent(QMouseEvent* e)
+void ScreenTimer::setupUi(QSize scrnSz)
 {
-    //setCursor(Qt::OpenHandCursor);
-    /*m_Pos = e->pos();
-    m_WidMov = true;*/
-    QWidget::mousePressEvent(e);
-}
+    QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(this->sizePolicy().hasHeightForWidth());
 
-void ScreenTimer::mouseReleaseEvent(QMouseEvent* e)
-{
-    //setCursor(Qt::ArrowCursor);
-    m_WidMov = false;
+    printf("screen width %d height %d\n", scrnSz.width(), scrnSz.height());
+    printf("widget width %f height %f\n", scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC);
+    if (this->objectName().isEmpty())
+        this->setObjectName(QString::fromUtf8("ScreenTimer"));
+	this->resize(scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC);
+    this->setSizePolicy(sizePolicy);
+    this->setMinimumSize(QSize(scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC));
+    this->setMaximumSize(QSize(scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC));
+    
+    centralWidget = new CentralWgt(scrnSz, this);
+    centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
+    sizePolicy.setHeightForWidth(centralWidget->sizePolicy().hasHeightForWidth());
+    centralWidget->setSizePolicy(sizePolicy);
+    centralWidget->setMinimumSize(QSize(scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC));
+    centralWidget->setMaximumSize(QSize(scrnSz.width() * WGT_WDTH_PERC, scrnSz.height() * WGT_HGHT_PERC));
 
-    Q_UNUSED(e)
-}
+    this->setCentralWidget(centralWidget);
 
-void ScreenTimer::mouseDoubleClickEvent(QMouseEvent* e)
-{
-    Q_UNUSED(e)
-}
-
-void ScreenTimer::enterEvent(QEvent* e)
-{
-    m_InWid = true;
-    setAttribute(Qt::WA_TranslucentBackground, false);
-    setAttribute(Qt::WA_NoSystemBackground, false);
-    //m_pBlur is dynamically deleted
-    /*if (m_pBlur != Q_NULLPTR)
-        delete m_pBlur;*/
-	m_pBlur = new BlurPanel();
-    this->setGraphicsEffect(m_pBlur);
-    //update();
-    ui.xBtn->setVisible(true);
-    ui.sBtn->setVisible(true);
-    ui.rBtn->setVisible(true);
-    QWidget::enterEvent(e);
-}
-
-void ScreenTimer::leaveEvent(QEvent* e)
-{
-    m_InWid = false;
-    m_BtnTmr.start(CNTRL_SH_INT);
-    QWidget::leaveEvent(e);
-}
-
-void ScreenTimer::mouseMoveEvent(QMouseEvent* e)
-{
-    //setAttribute(Qt::WA_TranslucentBackground, false);
-    //setAttribute(Qt::WA_NoSystemBackground, false);
-    ////this->setGraphicsEffect(m_pBlur);
-    //update();
-    //ui.sBtn->setVisible(true);
-    //ui.rBtn->setVisible(true);
-
-    /*if (m_WidMov)
-    {
-        QPoint diff = e->pos() - m_Pos;
-        window()->move(window()->pos() + diff);
-    }*/
-    QWidget::mouseMoveEvent(e);
-}
-
-void ScreenTimer::sClick()
-{
-
-}
-
-void ScreenTimer::rClick()
-{
-
-}
-
-void ScreenTimer::xClick()
-{
-    close();
-    exit(0);
-}
-
-void ScreenTimer::cntrlOff()
-{
-    if (/*!isActiveWindow() &&*/ !m_InWid)
-    {
-        ui.xBtn->setVisible(false);
-        ui.sBtn->setVisible(false);
-        ui.rBtn->setVisible(false);
-        setAttribute(Qt::WA_TranslucentBackground, true);
-        setAttribute(Qt::WA_NoSystemBackground, true);
-        this->setGraphicsEffect(m_pNoBlur);
-        //m_pBlur is dynamically deleted
-        /*if (m_pBlur != Q_NULLPTR)
-            delete m_pBlur;*/
-        update();
-    }
-}
+    //QMetaObject::connectSlotsByName(this);
+} // setupUi

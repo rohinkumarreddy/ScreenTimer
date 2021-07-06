@@ -41,14 +41,15 @@
     <ClCompile Include="BlurPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <QtUic Include="ScreenTimer.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
+    <ClCompile Include="centralWgt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="BlurPanel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="centralWgt.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
